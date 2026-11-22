@@ -210,6 +210,7 @@ Verified against `package.json` on 2026-10-23 — correct a line here the moment
 - Validate i18n: `node scripts/validate-translations.js`
 - Validate Intl helpers: `node scripts/validate-intl.js`
 - Validate native module inventory: `npm run validate:modules`
+- Side-by-side test build (installs next to the Play Store app with id suffix `.debug`): set `SUBSTREAMER_SIDE_BY_SIDE=1` when running `expo prebuild` (Windows: `$env:SUBSTREAMER_SIDE_BY_SIDE='1'`)
 - Circular imports: `npx madge --circular --extensions ts,tsx src`
 - Native build (Android): `npm run android` (device: `npm run android:device`)
 - Native build (iOS): `npm run ios`
