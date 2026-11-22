@@ -12,6 +12,7 @@
  *
  * Per AGENTS.md §11 the substitute proves SQL semantics, never concurrency.
  */
+import { AppState } from 'react-native';
 import type { Child } from 'subsonic-api';
 
 import { settleDbWrites } from '../../test-utils/settleDbWrites';
@@ -26,6 +27,11 @@ import {
   persistPositionIfDue,
   persistQueue,
 } from '../queuePersistenceService';
+
+const originalAppState = AppState.currentState;
+function setAppState(state: string): void {
+  Object.defineProperty(AppState, 'currentState', { configurable: true, writable: true, value: state });
+}
 
 const handle = getDb();
 if (handle === null) throw new Error('test DB unavailable — the op-SQLite substitute failed to open');
@@ -157,10 +163,14 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+  setAppState(originalAppState ?? 'active');
+  jest.restoreAllMocks();
   jest.useRealTimers();
 });
 
 beforeEach(() => {
+  // The debounce suites below assume a foregrounded app.
+  setAppState('active');
   __setDbForTests(realDb);
   // Resets the module: the pending write + its timer, the position throttle, and the
   // stored row. ON DELETE CASCADE clears the songs and their five array tables.
@@ -246,6 +256,46 @@ describe('the split write', () => {
     expect(countOf('queue_snapshot_songs')).toBe(2);
     expect(countOf('queue_snapshot_song_moods')).toBe(4);
     expect(liveRow()?.track_count).toBe(2);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Backgrounded: no timer to wait on                                  */
+/* ------------------------------------------------------------------ */
+
+describe('a queue change while not active', () => {
+  it.each(['background', 'inactive'])('writes at once when the app is %s', async (state) => {
+    setAppState(state);
+
+    persistQueue(queueOf(4), 2);
+    await drain();
+
+    expect(countOf('queue_snapshot_songs')).toBe(4);
+    expect(liveRow()).toMatchObject({ current_index: 2, track_count: 4 });
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('does not leave the index and position writers skipping', async () => {
+    setAppState('background');
+    persistQueue(queueOf(5), 0);
+    await drain();
+
+    persistCurrentIndex(3);
+    await drain();
+    expect(liveRow()?.current_index).toBe(3);
+
+    expect(persistPositionIfDue(12, 's-03')).toBe(true);
+    await drain();
+    expect(liveRow()).toMatchObject({ current_index: 3, position_sec: 12 });
+  });
+
+  it('keeps the debounce while active', async () => {
+    setAppState('active');
+    persistQueue(queueOf(2), 0);
+    await drain();
+    expect(countOf('queue_snapshot_songs')).toBe(0);
+    await flushDebounce();
+    expect(countOf('queue_snapshot_songs')).toBe(2);
   });
 });
 

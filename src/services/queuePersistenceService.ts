@@ -9,6 +9,8 @@
 // the first read of the session seeds them from the stored row. The stored position
 // always belongs to the track under the cursor, because moving the cursor onto a
 // different track zeroes it.
+import { AppState } from 'react-native';
+
 import {
   deleteSnapshot,
   readSnapshotSync,
@@ -124,6 +126,12 @@ function flushQueueWrite(): void {
 export function persistQueue(queue: Child[], currentTrackIndex: number): void {
   setCursor(queue, currentTrackIndex);
   queueDirty = true;
+  // JS timers do not fire in the background, and a pending flush there would also
+  // make the index/position writers skip while dirty.
+  if (AppState.currentState !== 'active') {
+    flushQueueWrite();
+    return;
+  }
   clearQueueTimer();
   queueTimer = setTimeout(flushQueueWrite, QUEUE_DEBOUNCE_MS);
 }
