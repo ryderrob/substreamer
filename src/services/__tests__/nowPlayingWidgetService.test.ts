@@ -91,41 +91,41 @@ describe('buildSnapshot', () => {
       return { queue, snap: __test.buildSnapshot() };
     };
 
-    it('keeps a queue of exactly 500 whole', () => {
-      const { snap } = build(500, 499);
+    it('keeps a queue of exactly 100 whole', () => {
+      const { snap } = build(100, 99);
       expect(snap.offset).toBe(0);
-      expect(snap.currentIndex).toBe(499);
-      expect(snap.tracks).toHaveLength(500);
+      expect(snap.currentIndex).toBe(99);
+      expect(snap.tracks).toHaveLength(100);
     });
 
     it('starts at 0 when the current track is near the head of a long queue', () => {
       const { snap } = build(1000, 0);
       expect(snap.offset).toBe(0);
       expect(snap.currentIndex).toBe(0);
-      expect(snap.tracks).toHaveLength(500);
+      expect(snap.tracks).toHaveLength(100);
     });
 
     it('centres the window on a deep current track', () => {
       const { queue, snap } = build(1000, 600);
-      expect(snap.offset).toBe(350);
-      expect(snap.currentIndex).toBe(250);
-      expect(snap.tracks[250].id).toBe(queue[600].id);
-      expect(snap.tracks).toHaveLength(500);
+      expect(snap.offset).toBe(550);
+      expect(snap.currentIndex).toBe(50);
+      expect(snap.tracks[50].id).toBe(queue[600].id);
+      expect(snap.tracks).toHaveLength(100);
     });
 
     it('clamps the window to the queue tail', () => {
       const { queue, snap } = build(1000, 990);
-      expect(snap.offset).toBe(500);
-      expect(snap.currentIndex).toBe(490);
-      expect(snap.tracks[490].id).toBe(queue[990].id);
-      expect(snap.tracks).toHaveLength(500);
+      expect(snap.offset).toBe(900);
+      expect(snap.currentIndex).toBe(90);
+      expect(snap.tracks[90].id).toBe(queue[990].id);
+      expect(snap.tracks).toHaveLength(100);
     });
 
     it('uses offset 0 and currentIndex -1 with no current track', () => {
       const { snap } = build(1000, null);
       expect(snap.offset).toBe(0);
       expect(snap.currentIndex).toBe(-1);
-      expect(snap.tracks).toHaveLength(500);
+      expect(snap.tracks).toHaveLength(100);
     });
   });
 

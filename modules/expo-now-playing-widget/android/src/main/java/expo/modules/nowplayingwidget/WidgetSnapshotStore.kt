@@ -4,8 +4,8 @@ import android.content.Context
 
 /**
  * Persists the latest [WidgetSnapshot] to SharedPreferences so the widget still
- * renders the last known state after the app process is killed. The list factory
- * ([QueueRemoteViewsFactory]) and the header renderer both read from here; the JS
+ * renders the last known state after the app process is killed.
+ * [NowPlayingWidgetProvider] renders from here; the JS
  * bridge and [WidgetControlReceiver] write to it.
  */
 object WidgetSnapshotStore {

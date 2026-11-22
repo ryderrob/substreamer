@@ -1,13 +1,15 @@
 package expo.modules.nowplayingwidget
 
 import android.content.Context
+import android.content.Intent
 import android.view.View
 import android.widget.RemoteViews
+import androidx.core.widget.RemoteViewsCompat
 
 /**
- * Builds the widget's root RemoteViews: the now-playing header (art, title,
- * artist, transport controls) over the queue ListView. Runs off the main thread
- * (the refresh executor) because it decodes the header bitmap.
+ * Builds the widget's RemoteViews: the now-playing header (art, title, artist,
+ * transport controls) and the queue rows. Runs off the main thread (the refresh
+ * executor) because it decodes the header bitmap.
  */
 object WidgetRenderer {
   private const val HEADER_ART_PX = 200
@@ -45,5 +47,36 @@ object WidgetRenderer {
     views.setOnClickPendingIntent(R.id.nppw_next, WidgetControlReceiver.pending(context, WidgetControlReceiver.ACTION_NEXT))
 
     return views
+  }
+
+  /** The queue rows as inline collection items (text only). Item ids are absolute
+   *  queue indexes; a row tap carries that index via a fill-in intent merged into
+   *  [WidgetControlReceiver.skipTemplate]. */
+  fun buildQueueItems(context: Context, snapshot: WidgetSnapshot): RemoteViewsCompat.RemoteCollectionItems {
+    val builder = RemoteViewsCompat.RemoteCollectionItems.Builder()
+      .setHasStableIds(true)
+      .setViewTypeCount(1)
+    val accent = context.getColor(R.color.nppw_accent)
+    val primary = context.getColor(R.color.nppw_text_primary)
+
+    snapshot.tracks.forEachIndexed { i, track ->
+      val isCurrent = i == snapshot.currentIndex
+      val absolute = snapshot.offset + i
+      val row = RemoteViews(context.packageName, R.layout.nppw_queue_item)
+      row.setTextViewText(R.id.nppw_row_title, track.title)
+      row.setTextViewText(R.id.nppw_row_artist, track.artist)
+      row.setInt(
+        R.id.nppw_row_root,
+        "setBackgroundResource",
+        if (isCurrent) R.drawable.nppw_row_current_bg else 0,
+      )
+      row.setTextColor(R.id.nppw_row_title, if (isCurrent) accent else primary)
+      row.setOnClickFillInIntent(
+        R.id.nppw_row_root,
+        Intent().putExtra(WidgetControlReceiver.EXTRA_INDEX, absolute),
+      )
+      builder.addItem(absolute.toLong(), row)
+    }
+    return builder.build()
   }
 }

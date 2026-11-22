@@ -21,12 +21,5 @@
         android:name=".WidgetControlReceiver"
         android:exported="false" />
 
-    <!-- Backs the scrollable queue ListView. BIND_REMOTEVIEWS so only the
-         system (the launcher's AppWidget host) can bind it. -->
-    <service
-        android:name=".QueueWidgetService"
-        android:permission="android.permission.BIND_REMOTEVIEWS"
-        android:exported="false" />
-
   </application>
 </manifest>

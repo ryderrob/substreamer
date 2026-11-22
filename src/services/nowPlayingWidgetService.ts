@@ -4,11 +4,11 @@
  * active index, or the play/pause state changes.
  *
  * The widget itself is native (Media3 `MediaController` bound to RNQP's
- * `PlaybackService` for transport; a `RemoteViewsService` list for the queue).
- * This service only PUBLISHES state; it issues no commands. Row artwork is the
- * plain cover-art URL (`getCoverArtUrl`, a synchronous query-string builder) so
- * even a large queue costs no IO here — the native side fetches + caches the
- * bitmap lazily per visible row. Android-only; a no-op elsewhere (the native
+ * `PlaybackService` for transport; the queue rows travel inline in each widget
+ * update). This service only PUBLISHES state; it issues no commands. Artwork is
+ * the plain cover-art URL (`getCoverArtUrl`, a synchronous query-string builder),
+ * so publishing costs no IO here; the native side fetches + caches the header
+ * bitmap. Android-only; a no-op elsewhere (the native
  * module resolves to a no-op off Android too, but the Platform guard avoids the
  * wasted snapshot build).
  */
@@ -22,10 +22,10 @@ import { getCoverArtUrl } from './subsonicService';
  *  pathological queues. Longer queues are sent as a window of MAX_ROWS rows
  *  around the current track; `offset` maps rows back to absolute queue indexes.
  *  The window rule must stay identical to `WidgetWindow` in WidgetModels.kt. */
-const MAX_ROWS = 500;
+const MAX_ROWS = 100;
 /** Rows kept before the current track when the queue is windowed. */
 const WINDOW_LEAD = MAX_ROWS / 2;
-/** Row cover-art request size (px) — small; the widget thumbnail is ~40dp. */
+/** Cover-art request size (px) for the widget's header image. */
 const ART_SIZE = 160;
 
 let initialized = false;

@@ -16,7 +16,7 @@ data class WidgetTrack(
  * current track inside. Must stay identical to the JS rule in `nowPlayingWidgetService.ts`.
  */
 object WidgetWindow {
-  const val MAX_ROWS = 500
+  const val MAX_ROWS = 100
   const val LEAD = MAX_ROWS / 2
 
   /** Absolute queue index of the first row; 0 when there is no current track. */
