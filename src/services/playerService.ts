@@ -29,6 +29,7 @@ import { sleepTimerStore } from '../store/sleepTimerStore';
 import { shuffleArray } from '../utils/arrayHelpers';
 import { addCompletedScrobble, sendNowPlaying } from './scrobbleService';
 import { registerPlayerPlayStatListener } from './playStatsService';
+import { initNowPlayingWidget } from './nowPlayingWidgetService';
 import { syncProxyUpstreams } from './sslTrustService';
 import { getLocalTrackUri, waitForTrackMapsReady } from './musicCacheService';
 import {
@@ -291,6 +292,10 @@ export async function initPlayer(): Promise<void> {
       }
     }
   });
+
+  // Android home-screen widget: subscribe to the player store so the widget's
+  // queue + controls track playback. Android-only no-op elsewhere; idempotent.
+  initNowPlayingWidget();
 }
 
 /* ------------------------------------------------------------------ */

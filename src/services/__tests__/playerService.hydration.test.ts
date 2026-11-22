@@ -87,6 +87,7 @@ jest.mock('../../store/serverInfoStore', () => ({
 }));
 
 jest.mock('../scrobbleService', () => ({ addCompletedScrobble: jest.fn(), sendNowPlaying: jest.fn() }));
+jest.mock('../nowPlayingWidgetService', () => ({ initNowPlayingWidget: jest.fn() }));
 jest.mock('../imageCacheService', () => ({
   resolveDisplayImages: jest.fn(async (subjects: unknown[]) =>
     subjects.map(() => ({ coverArtId: undefined, uri: null, isRemote: false }))),

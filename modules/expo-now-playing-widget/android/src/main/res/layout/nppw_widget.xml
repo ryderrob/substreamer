@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/nppw_bg"
+    android:padding="12dp">
+
+  <!-- Now-playing header -->
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="horizontal"
+      android:gravity="center_vertical">
+
+    <ImageView
+        android:id="@+id/nppw_art"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/nppw_cd_art"
+        android:src="@drawable/nppw_placeholder" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="6dp"
+        android:orientation="vertical">
+
+      <TextView
+          android:id="@+id/nppw_title"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:maxLines="1"
+          android:ellipsize="end"
+          android:textColor="@color/nppw_text_primary"
+          android:textSize="15sp"
+          android:textStyle="bold"
+          android:text="@string/nppw_empty_title" />
+
+      <TextView
+          android:id="@+id/nppw_artist"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="2dp"
+          android:maxLines="1"
+          android:ellipsize="end"
+          android:textColor="@color/nppw_text_secondary"
+          android:textSize="12sp" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/nppw_prev"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:padding="9dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/nppw_cd_previous"
+        android:src="@drawable/nppw_ic_prev" />
+
+    <ImageView
+        android:id="@+id/nppw_playpause"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="9dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/nppw_cd_play"
+        android:src="@drawable/nppw_ic_play" />
+
+    <ImageView
+        android:id="@+id/nppw_next"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:padding="9dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/nppw_cd_next"
+        android:src="@drawable/nppw_ic_next" />
+  </LinearLayout>
+
+  <!-- Divider. Must be an ImageView, not a bare <View>: RemoteViews inflates
+       with a restricted LayoutInflater that disallows android.view.View. -->
+  <ImageView
+      android:layout_width="match_parent"
+      android:layout_height="1dp"
+      android:layout_marginTop="10dp"
+      android:layout_marginBottom="2dp"
+      android:scaleType="fitXY"
+      android:contentDescription="@null"
+      android:src="@color/nppw_line" />
+
+  <!-- Queue: ListView with an empty-state sibling -->
+  <FrameLayout
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1">
+
+    <ListView
+        android:id="@+id/nppw_queue_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="@null"
+        android:dividerHeight="0dp" />
+
+    <TextView
+        android:id="@+id/nppw_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:textColor="@color/nppw_text_secondary"
+        android:textSize="13sp"
+        android:text="@string/nppw_empty_title" />
+  </FrameLayout>
+</LinearLayout>

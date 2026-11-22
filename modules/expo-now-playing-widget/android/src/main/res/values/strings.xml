@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="nppw_widget_label">Substreamer — Now Playing</string>
+  <string name="nppw_widget_description">Playback controls and your current queue.</string>
+  <string name="nppw_empty_title">Nothing playing</string>
+  <string name="nppw_cd_play">Play</string>
+  <string name="nppw_cd_pause">Pause</string>
+  <string name="nppw_cd_next">Next track</string>
+  <string name="nppw_cd_previous">Previous track</string>
+  <string name="nppw_cd_art">Cover art</string>
+</resources>

@@ -66,6 +66,10 @@ jest.mock('../scrobbleService', () => ({
   sendNowPlaying: jest.fn(),
 }));
 
+jest.mock('../nowPlayingWidgetService', () => ({
+  initNowPlayingWidget: jest.fn(),
+}));
+
 jest.mock('../imageCacheService', () => ({
   resolveDisplayImages: jest.fn(async (subjects: unknown[]) =>
     subjects.map(() => ({ coverArtId: undefined, uri: null, isRemote: false }))),
@@ -106,6 +110,7 @@ jest.mock('../queuePersistenceService', () => ({
 }));
 
 import { playbackSettingsStore } from '../../store/playbackSettingsStore';
+import { initNowPlayingWidget } from '../nowPlayingWidgetService';
 import { addCompletedScrobble, sendNowPlaying } from '../scrobbleService';
 import { getCoverArtUrl, getStreamUrl, type Child } from '../subsonicService';
 import {
@@ -183,11 +188,15 @@ const defaultPlayerState = () => ({
   setTrackSource: mockSetTrackSource,
 });
 
+let initWidgetCallsAtBoot = 0;
+
 beforeAll(async () => {
   jest.spyOn(console, 'log').mockImplementation();
   jest.spyOn(console, 'warn').mockImplementation();
   // initPlayer is idempotent; call once to register the RNQP event listeners.
   await initPlayer();
+  // beforeEach clears mock calls, so capture the count from this single boot call.
+  initWidgetCallsAtBoot = jest.mocked(initNowPlayingWidget).mock.calls.length;
 });
 
 afterAll(() => {
@@ -228,6 +237,10 @@ describe('initPlayer', () => {
   it('registered the RNQP player + emitter used by these tests', () => {
     expect(typeof mockTP.setQueue).toBe('function');
     expect(typeof emit).toBe('function');
+  });
+
+  it('initialises the now-playing widget exactly once', () => {
+    expect(initWidgetCallsAtBoot).toBe(1);
   });
 });
 

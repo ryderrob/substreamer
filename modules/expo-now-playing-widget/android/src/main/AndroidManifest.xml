@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+
+    <!-- Home-screen widget. exported=true so it appears in the system widget
+         picker and receives the framework APPWIDGET_UPDATE broadcast. -->
+    <receiver
+        android:name=".NowPlayingWidgetProvider"
+        android:exported="true"
+        android:label="@string/nppw_widget_label">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/now_playing_widget_info" />
+    </receiver>
+
+    <!-- Transport taps. Only ever receives PendingIntents the app sends to
+         itself, so it stays unexported. -->
+    <receiver
+        android:name=".WidgetControlReceiver"
+        android:exported="false" />
+
+    <!-- Backs the scrollable queue ListView. BIND_REMOTEVIEWS so only the
+         system (the launcher's AppWidget host) can bind it. -->
+    <service
+        android:name=".QueueWidgetService"
+        android:permission="android.permission.BIND_REMOTEVIEWS"
+        android:exported="false" />
+
+  </application>
+</manifest>
