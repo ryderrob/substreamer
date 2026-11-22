@@ -11,6 +11,7 @@
  * Writes become silent no-ops when `getDb()` returns null (DB init failed)
  * — callers don't need to handle exceptions.
  */
+import { yieldToUi } from '../../utils/yieldToUi';
 import { getDb, type BatchCommand } from './db';
 import { childSnapshotArrayCommands } from '../../db/childSnapshot';
 import { type PendingScrobble } from '../pendingScrobbleStore';
@@ -127,7 +128,7 @@ export async function hydratePendingScrobblesAsync(): Promise<PendingScrobble[]>
     for (let i = 0; i < rows.length; i += PENDING_HYDRATE_CHUNK) {
       if (i > 0) {
         // eslint-disable-next-line no-await-in-loop
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        await yieldToUi();
       }
       // eslint-disable-next-line no-await-in-loop
       const chunk = await scrobblesWithArrays(

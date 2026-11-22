@@ -10,6 +10,7 @@
  * thread — O(log n) seeks, never offset scans, never whole-table loads.
  */
 
+import { yieldToUi } from '../../utils/yieldToUi';
 import type { BatchCommand, InternalDb } from '../client';
 
 export type Value = string | number | null;
@@ -199,8 +200,8 @@ export async function bulkUpsert<T>(
     prevWrite.catch(() => undefined);
     done += chunk.length;
     onProgress?.(done, sorted.length);
-    // Yield a macrotask so the UI can paint; the write keeps running meanwhile.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Yield so the UI can paint while in the foreground; the write keeps running meanwhile.
+    await yieldToUi();
   }
   await prevWrite; // ensure the final chunk is committed before returning
   return done;

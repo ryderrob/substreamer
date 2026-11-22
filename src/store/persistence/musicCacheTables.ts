@@ -39,6 +39,7 @@ import {
 import { getSortArticles } from '@/db/sortArticles';
 import { albumSortKeys, playlistSortTitle, songSortKeys } from '@/db/sortKeys';
 
+import { yieldToUi } from '../../utils/yieldToUi';
 import { getDb, type BatchCommand, type InternalDb } from './db';
 
 /** The `album_id` directory of a downloaded song the server gave no album. */
@@ -711,7 +712,7 @@ const yieldMacrotask = (): Promise<void> =>
 
 async function yieldEvery(i: number): Promise<void> {
   if (i > 0 && i % HYDRATE_MAP_CHUNK === 0) {
-    await yieldMacrotask();
+    await yieldToUi();
   }
 }
 
