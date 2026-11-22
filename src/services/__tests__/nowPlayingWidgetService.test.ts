@@ -40,8 +40,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // Dispose the store subscription + any pending debounce timer so nothing
-  // fires after the Jest environment is torn down.
+  // Dispose the store subscription so nothing fires after the Jest environment
+  // is torn down.
   __test.reset();
 });
 
@@ -150,51 +150,68 @@ describe('clearNowPlayingWidget', () => {
 });
 
 describe('initNowPlayingWidget', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-  afterEach(() => {
-    // Tear down the subscription + pending timer while fake timers are still
-    // active, then drop any residual fake timers before restoring real ones.
-    __test.reset();
-    jest.clearAllTimers();
-    jest.useRealTimers();
-  });
+  const flushMicrotasks = async () => {
+    for (let i = 0; i < 3; i++) await Promise.resolve();
+  };
 
-  it('pushes an initial snapshot and re-pushes on relevant changes (debounced)', () => {
+  it('pushes an initial snapshot and re-pushes on relevant changes', async () => {
     initNowPlayingWidget();
-    // initial scheduleSync
-    jest.advanceTimersByTime(300);
+    await flushMicrotasks();
     expect(mockSet).toHaveBeenCalledTimes(1);
 
-    // a queue change schedules another push
     playerStore.setState({ queue: [track('a')], currentTrackIndex: 0, playbackState: 'playing' });
-    jest.advanceTimersByTime(300);
+    await flushMicrotasks();
     expect(mockSet).toHaveBeenCalledTimes(2);
-
-    // a pure progress tick does NOT
-    playerStore.setState({ position: 5 });
-    jest.advanceTimersByTime(300);
-    expect(mockSet).toHaveBeenCalledTimes(2);
+    expect(mockSet).toHaveBeenLastCalledWith(expect.objectContaining({ hasSession: true, isPlaying: true }));
   });
 
-  it('coalesces a burst of changes into one push', () => {
+  it('does not push on a pure progress tick', async () => {
     initNowPlayingWidget();
-    jest.advanceTimersByTime(300); // drain initial
+    await flushMicrotasks();
+    mockSet.mockClear();
+
+    playerStore.setState({ position: 5 });
+    await flushMicrotasks();
+
+    expect(mockSet).not.toHaveBeenCalled();
+  });
+
+  it('coalesces a synchronous burst of changes into one push', async () => {
+    initNowPlayingWidget();
+    await flushMicrotasks();
     mockSet.mockClear();
 
     playerStore.setState({ playbackState: 'playing' });
     playerStore.setState({ currentTrackIndex: 2 });
     playerStore.setState({ queue: [track('a'), track('b'), track('c')] });
-    jest.advanceTimersByTime(300);
+    await flushMicrotasks();
 
     expect(mockSet).toHaveBeenCalledTimes(1);
+    expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ currentIndex: 2, isPlaying: true }));
   });
 
-  it('is idempotent and a no-op off Android', () => {
+  it('is a no-op off Android', async () => {
     setPlatform('ios');
     initNowPlayingWidget();
-    jest.advanceTimersByTime(300);
+    playerStore.setState({ queue: [track('a')] });
+    await flushMicrotasks();
     expect(mockSet).not.toHaveBeenCalled();
+  });
+
+  it('publishes without any timer advancing (timers are paused in the background)', async () => {
+    jest.useFakeTimers();
+    try {
+      initNowPlayingWidget();
+      await flushMicrotasks();
+      expect(mockSet).toHaveBeenCalledTimes(1);
+
+      playerStore.setState({ queue: [track('a')], currentTrackIndex: 0, playbackState: 'playing' });
+      await flushMicrotasks();
+      expect(mockSet).toHaveBeenCalledTimes(2);
+    } finally {
+      __test.reset();
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 });

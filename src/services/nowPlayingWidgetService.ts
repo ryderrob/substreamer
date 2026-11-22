@@ -24,10 +24,9 @@ import { getCoverArtUrl } from './subsonicService';
 const MAX_ROWS = 500;
 /** Row cover-art request size (px) — small; the widget thumbnail is ~40dp. */
 const ART_SIZE = 160;
-const DEBOUNCE_MS = 300;
 
 let initialized = false;
-let timer: ReturnType<typeof setTimeout> | null = null;
+let scheduled = false;
 let unsubscribe: (() => void) | null = null;
 
 function buildSnapshot(): WidgetSnapshot {
@@ -59,13 +58,15 @@ export function syncNowPlayingWidget(): void {
   }
 }
 
-/** Coalesce bursts of player-state writes into one push. */
+/** Coalesce bursts of player-state writes into one push. A microtask, not a timer:
+ *  React Native pauses JS timers while the app is in the background. */
 function scheduleSync(): void {
-  if (timer) return;
-  timer = setTimeout(() => {
-    timer = null;
+  if (scheduled) return;
+  scheduled = true;
+  Promise.resolve().then(() => {
+    scheduled = false;
     syncNowPlayingWidget();
-  }, DEBOUNCE_MS);
+  });
 }
 
 /** Reset the widget to its empty state (queue cleared / logout). No-op off Android. */
@@ -105,10 +106,7 @@ export const __test = {
   buildSnapshot,
   reset: () => {
     initialized = false;
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
+    scheduled = false;
     if (unsubscribe) {
       unsubscribe();
       unsubscribe = null;
