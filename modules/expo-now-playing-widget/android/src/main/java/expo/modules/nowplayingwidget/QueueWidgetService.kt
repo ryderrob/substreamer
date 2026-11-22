@@ -58,7 +58,7 @@ class QueueRemoteViewsFactory(context: Context) : RemoteViewsService.RemoteViews
       appContext.getColor(if (isCurrent) R.color.nppw_accent else R.color.nppw_text_primary),
     )
 
-    val fillIn = Intent().putExtra(WidgetControlReceiver.EXTRA_INDEX, position)
+    val fillIn = Intent().putExtra(WidgetControlReceiver.EXTRA_INDEX, snapshot.offset + position)
     views.setOnClickFillInIntent(R.id.nppw_row_root, fillIn)
     return views
   }

@@ -19,9 +19,12 @@ import { playerStore } from '../store/playerStore';
 import { getCoverArtUrl } from './subsonicService';
 
 /** Cap rows pushed to the widget — bounds the bridge payload + stored blob for
- *  pathological queues. A home-screen list never needs more, and tap-to-jump
- *  indexes from the queue start so the cap only ever drops the deep tail. */
+ *  pathological queues. Longer queues are sent as a window of MAX_ROWS rows
+ *  around the current track; `offset` maps rows back to absolute queue indexes.
+ *  The window rule must stay identical to `WidgetWindow` in WidgetModels.kt. */
 const MAX_ROWS = 500;
+/** Rows kept before the current track when the queue is windowed. */
+const WINDOW_LEAD = MAX_ROWS / 2;
 /** Row cover-art request size (px) — small; the widget thumbnail is ~40dp. */
 const ART_SIZE = 160;
 
@@ -31,7 +34,12 @@ let unsubscribe: (() => void) | null = null;
 
 function buildSnapshot(): WidgetSnapshot {
   const { queue, currentTrackIndex, playbackState } = playerStore.getState();
-  const tracks: WidgetTrack[] = queue.slice(0, MAX_ROWS).map((c) => ({
+  const hasCurrent =
+    currentTrackIndex != null && currentTrackIndex >= 0 && currentTrackIndex < queue.length;
+  const start = hasCurrent
+    ? Math.min(Math.max(currentTrackIndex - WINDOW_LEAD, 0), Math.max(0, queue.length - MAX_ROWS))
+    : 0;
+  const tracks: WidgetTrack[] = queue.slice(start, start + MAX_ROWS).map((c) => ({
     id: c.id,
     title: c.title ?? '',
     artist: c.artist ?? '',
@@ -40,10 +48,8 @@ function buildSnapshot(): WidgetSnapshot {
   return {
     hasSession: tracks.length > 0,
     isPlaying: playbackState === 'playing',
-    currentIndex:
-      currentTrackIndex != null && currentTrackIndex >= 0 && currentTrackIndex < tracks.length
-        ? currentTrackIndex
-        : -1,
+    currentIndex: hasCurrent ? currentTrackIndex - start : -1,
+    offset: start,
     tracks,
   };
 }

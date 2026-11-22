@@ -12,6 +12,21 @@ data class WidgetTrack(
 )
 
 /**
+ * Which slice of a long queue the widget holds: at most [MAX_ROWS] rows with the
+ * current track inside. Must stay identical to the JS rule in `nowPlayingWidgetService.ts`.
+ */
+object WidgetWindow {
+  const val MAX_ROWS = 500
+  const val LEAD = MAX_ROWS / 2
+
+  /** Absolute queue index of the first row; 0 when there is no current track. */
+  fun start(current: Int, count: Int): Int {
+    if (current < 0 || current >= count) return 0
+    return (current - LEAD).coerceIn(0, maxOf(0, count - MAX_ROWS))
+  }
+}
+
+/**
  * The full state the widget renders from. Mirrors the JS `WidgetSnapshot`.
  * Produced either by the JS `nowPlayingWidgetService` (app alive) or by
  * [WidgetControlReceiver] reading the live MediaController after a tap (JS dead).
@@ -21,6 +36,8 @@ data class WidgetSnapshot(
   val isPlaying: Boolean,
   /** Index of the current track within [tracks], or -1. */
   val currentIndex: Int,
+  /** Absolute queue index of `tracks[0]` (the snapshot holds a window of the queue). */
+  val offset: Int,
   val tracks: List<WidgetTrack>,
 ) {
   fun toJson(): String {
@@ -38,12 +55,13 @@ data class WidgetSnapshot(
       .put("hasSession", hasSession)
       .put("isPlaying", isPlaying)
       .put("currentIndex", currentIndex)
+      .put("offset", offset)
       .put("tracks", arr)
       .toString()
   }
 
   companion object {
-    val EMPTY = WidgetSnapshot(hasSession = false, isPlaying = false, currentIndex = -1, tracks = emptyList())
+    val EMPTY = WidgetSnapshot(hasSession = false, isPlaying = false, currentIndex = -1, offset = 0, tracks = emptyList())
 
     /** Parse a snapshot JSON string. Returns [EMPTY] on malformed input. */
     fun fromJson(json: String): WidgetSnapshot {
@@ -66,6 +84,7 @@ data class WidgetSnapshot(
           hasSession = obj.optBoolean("hasSession", tracks.isNotEmpty()),
           isPlaying = obj.optBoolean("isPlaying", false),
           currentIndex = obj.optInt("currentIndex", -1),
+          offset = obj.optInt("offset", 0),
           tracks = tracks,
         )
       } catch (_: Throwable) {

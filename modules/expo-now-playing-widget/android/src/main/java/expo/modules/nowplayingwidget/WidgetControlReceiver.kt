@@ -80,8 +80,11 @@ class WidgetControlReceiver : BroadcastReceiver() {
    */
   private fun publishFromController(context: Context, controller: MediaController, expectedPlaying: Boolean) {
     val count = controller.mediaItemCount
-    val tracks = ArrayList<WidgetTrack>(count)
-    for (i in 0 until count) {
+    val current = controller.currentMediaItemIndex
+    val start = WidgetWindow.start(current, count)
+    val end = minOf(count, start + WidgetWindow.MAX_ROWS)
+    val tracks = ArrayList<WidgetTrack>(end - start)
+    for (i in start until end) {
       val item: MediaItem = controller.getMediaItemAt(i)
       val meta = item.mediaMetadata
       tracks.add(
@@ -96,7 +99,8 @@ class WidgetControlReceiver : BroadcastReceiver() {
     val snapshot = WidgetSnapshot(
       hasSession = count > 0,
       isPlaying = expectedPlaying,
-      currentIndex = controller.currentMediaItemIndex,
+      currentIndex = if (current in 0 until count) current - start else -1,
+      offset = start,
       tracks = tracks,
     )
     WidgetSnapshotStore.save(context, snapshot)

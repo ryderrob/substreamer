@@ -63,6 +63,7 @@ describe('buildSnapshot', () => {
       hasSession: true,
       isPlaying: true,
       currentIndex: 1,
+      offset: 0,
       tracks: [
         { id: 'a', title: 'Title a', artist: 'Artist a', artUri: 'art://cov-a?s=160' },
         { id: 'b', title: 'Title b', artist: 'Artist b', artUri: null },
@@ -78,7 +79,54 @@ describe('buildSnapshot', () => {
     expect(snap.hasSession).toBe(false);
     expect(snap.isPlaying).toBe(false);
     expect(snap.currentIndex).toBe(-1);
+    expect(snap.offset).toBe(0);
     expect(snap.tracks).toEqual([]);
+  });
+
+  describe('queue window', () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => track(`t${i}`));
+    const build = (n: number, current: number | null) => {
+      const queue = many(n);
+      playerStore.setState({ queue, currentTrackIndex: current, playbackState: 'playing' });
+      return { queue, snap: __test.buildSnapshot() };
+    };
+
+    it('keeps a queue of exactly 500 whole', () => {
+      const { snap } = build(500, 499);
+      expect(snap.offset).toBe(0);
+      expect(snap.currentIndex).toBe(499);
+      expect(snap.tracks).toHaveLength(500);
+    });
+
+    it('starts at 0 when the current track is near the head of a long queue', () => {
+      const { snap } = build(1000, 0);
+      expect(snap.offset).toBe(0);
+      expect(snap.currentIndex).toBe(0);
+      expect(snap.tracks).toHaveLength(500);
+    });
+
+    it('centres the window on a deep current track', () => {
+      const { queue, snap } = build(1000, 600);
+      expect(snap.offset).toBe(350);
+      expect(snap.currentIndex).toBe(250);
+      expect(snap.tracks[250].id).toBe(queue[600].id);
+      expect(snap.tracks).toHaveLength(500);
+    });
+
+    it('clamps the window to the queue tail', () => {
+      const { queue, snap } = build(1000, 990);
+      expect(snap.offset).toBe(500);
+      expect(snap.currentIndex).toBe(490);
+      expect(snap.tracks[490].id).toBe(queue[990].id);
+      expect(snap.tracks).toHaveLength(500);
+    });
+
+    it('uses offset 0 and currentIndex -1 with no current track', () => {
+      const { snap } = build(1000, null);
+      expect(snap.offset).toBe(0);
+      expect(snap.currentIndex).toBe(-1);
+      expect(snap.tracks).toHaveLength(500);
+    });
   });
 
   it('falls back to empty strings for missing title/artist', () => {

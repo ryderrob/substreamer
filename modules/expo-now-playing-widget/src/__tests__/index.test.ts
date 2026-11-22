@@ -13,6 +13,7 @@ describe('setWidgetSnapshot', () => {
       hasSession: true,
       isPlaying: true,
       currentIndex: 1,
+      offset: 0,
       tracks: [
         { id: 'a', title: 'A', artist: 'x', artUri: null },
         { id: 'b', title: 'B', artist: 'y', artUri: 'https://art/b' },
@@ -30,6 +31,7 @@ describe('setWidgetSnapshot', () => {
       hasSession: false,
       isPlaying: false,
       currentIndex: -1,
+      offset: 0,
       tracks: [],
     };
 

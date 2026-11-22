@@ -16,6 +16,8 @@ export interface WidgetSnapshot {
   isPlaying: boolean;
   /** Index of the current track within `tracks`, or -1 when nothing is active. */
   currentIndex: number;
+  /** Absolute queue index of `tracks[0]` (the snapshot holds a window of the queue). */
+  offset: number;
   tracks: WidgetTrack[];
 }
 
