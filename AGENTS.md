@@ -402,6 +402,10 @@ Prefer Symdex MCP server (when available) over Glob/Grep for symbol lookup, file
 - **The legacy blob tables are retained deliberately and stay commented out until the owner says otherwise.** `library_albums`, `song_index` and `album_details` are kept so the blob→SQL conversion can be re-run and re-tested on a device. The task that drops them is the LAST in the migration list and is disabled on purpose — not forgotten, not blocked on a bug. Do not enable it, and do not infer a reason for the comment other than this one.
 - **Hydrate stores from SQL in `rehydrateAllStores`**, not from a store's persist config. `headlessMediaService` runs the same pair before building the CarPlay browse tree, so doing it there makes headless work for free.
 
+### Background JS on Android
+
+- **JS timers do not fire while the app is backgrounded.** React Native fires `setTimeout`/`setInterval` (even 0 ms, in bridgeless mode) from a Choreographer frame callback that stops on host pause (`ReactAndroid/.../modules/core/JavaTimerManager.kt`); only promises and native events keep running, and RNQP's headless JS task finishes at once. Playback events, Android Auto, the widget and headless resume all run backgrounded, so never await a timer on those paths: coalesce with a promise microtask and yield with `yieldToUi()` (`src/utils/yieldToUi.ts`). A timer there does not delay — it hangs until the user opens the app.
+
 ### Testing reality
 
 - **Jest reproduces the SUBMISSION order, not the pool.** The substitute (`src/db/testing/opSqliteBetterSqlite3.ts`) carries op-SQLite's transaction lock, so which writes are visible to a later read is checkable in the suite — that is JS scheduling. What it cannot reproduce is the native pool draining underneath: no thread, no interleaving window mid-batch. A concurrency claim of that kind still needs a throwaway on-device spike; that is how the open-savepoint window (section 11, "The write path") was found. The rebuild's spike screens were deleted on 2026-08-08 — recover one from git history rather than reasoning from the suite.
