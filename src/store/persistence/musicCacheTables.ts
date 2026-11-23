@@ -707,9 +707,6 @@ export function hydrateCachedItems(): Record<string, CachedItemRow> {
 /** Rows mapped per macrotask yield during async hydration. */
 const HYDRATE_MAP_CHUNK = 2000;
 
-const yieldMacrotask = (): Promise<void> =>
-  new Promise<void>((resolve) => setTimeout(resolve, 0));
-
 async function yieldEvery(i: number): Promise<void> {
   if (i > 0 && i % HYDRATE_MAP_CHUNK === 0) {
     await yieldToUi();
@@ -753,7 +750,7 @@ const ITEM_HYDRATE_SELECT = `SELECT i.item_id, i.type, i.name, i.artist, i.cover
  * Async counterpart of {@link hydrateCachedSongs}, widened to the promoted
  * `Child` columns + the genre array so `getSongEnvelope` can stay synchronous.
  * The read runs on the DB's background thread (`getAllAsync`) and the
- * row→object mapping is chunked with `setTimeout(0)` yields, so a large
+ * row→object mapping is chunked with `yieldToUi` yields, so a large
  * cached-songs table does not freeze the JS thread at boot.
  */
 export async function hydrateCachedSongsAsync(): Promise<Record<string, CachedSongRow>> {
@@ -2097,7 +2094,7 @@ export async function clearAllMusicCacheRows(): Promise<void> {
 /** Value stamped into `meta_v` once a row's metadata lives in columns. */
 const META_V = 1;
 
-/** Rows converted per transaction, with a macrotask yield between chunks. */
+/** Rows converted per transaction, with a `yieldToUi` yield between chunks (no-op while backgrounded). */
 const CONVERT_CHUNK = 200;
 
 /** The A–Z keys are rewritten here too: this statement lands `sort_name`, which
@@ -2166,7 +2163,7 @@ async function runLegacyMetadataConversion(): Promise<boolean> {
       // eslint-disable-next-line no-await-in-loop
       await db.runAtomicBatchAsync(commands);
       // eslint-disable-next-line no-await-in-loop
-      await yieldMacrotask();
+      await yieldToUi();
     }
 
     for (;;) {
@@ -2201,7 +2198,7 @@ async function runLegacyMetadataConversion(): Promise<boolean> {
       // eslint-disable-next-line no-await-in-loop
       await db.runAtomicBatchAsync(commands);
       // eslint-disable-next-line no-await-in-loop
-      await yieldMacrotask();
+      await yieldToUi();
     }
   } catch {
     // The work set is unchanged — every batch is atomic, so a row is either
