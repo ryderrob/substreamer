@@ -42,14 +42,18 @@ class WidgetControlReceiver : BroadcastReceiver() {
         try {
           // Capture BEFORE the command — Media3 flips isPlaying asynchronously,
           // so the optimistic play-state must be derived from the prior value.
-          val wasPlaying = controller.isPlaying
-          applyCommand(controller, action, index, wasPlaying)
-          val expectedPlaying = when (action) {
-            ACTION_PLAY_PAUSE -> !wasPlaying
-            ACTION_SKIP -> true
-            else -> wasPlaying
+          if (controller.mediaItemCount == 0) {
+            handleColdPlayer(appContext, action, index)
+          } else {
+            val wasPlaying = controller.isPlaying
+            applyCommand(controller, action, index, wasPlaying)
+            val expectedPlaying = when (action) {
+              ACTION_PLAY_PAUSE -> !wasPlaying
+              ACTION_SKIP -> true
+              else -> wasPlaying
+            }
+            publishFromController(appContext, controller, expectedPlaying)
           }
-          publishFromController(appContext, controller, expectedPlaying)
         } catch (_: Throwable) {
           // Best-effort: a mid-command session teardown must not crash the receiver.
         } finally {
@@ -58,6 +62,43 @@ class WidgetControlReceiver : BroadcastReceiver() {
       }
       pending.finish()
     }, ContextCompat.getMainExecutor(appContext))
+  }
+
+  /**
+   * The player holds no queue (process was killed), so there is nothing to command or
+   * publish: the stored snapshot stays. A play or row tap asks the app's JS to restore
+   * its saved queue and play it.
+   */
+  private fun handleColdPlayer(context: Context, action: String, index: Int) {
+    when (action) {
+      ACTION_PLAY_PAUSE -> {
+        val stored = WidgetSnapshotStore.load(context)
+        if (stored.isPlaying) {
+          // Stale play icon from before the kill: correct it, do not resume.
+          WidgetSnapshotStore.save(context, stored.copy(isPlaying = false))
+          NowPlayingWidgetProvider.refreshAll(context)
+        } else {
+          requestResume(context, "play", null)
+        }
+      }
+      ACTION_SKIP -> if (index >= 0) requestResume(context, "skip", index)
+    }
+  }
+
+  private fun requestResume(context: Context, kind: String, index: Int?) {
+    WidgetResumeRequestStore.save(context, kind, index)
+    // RNQP starts the app's headless JS for this action when no React context is alive.
+    try {
+      context.startService(
+        Intent()
+          .setClassName(context.packageName, PLAYBACK_SERVICE_CLASS)
+          .setAction(ACTION_HEADLESS_WAKE),
+      )
+    } catch (e: IllegalStateException) {
+      android.util.Log.w("NPPW", "headless wake refused", e)
+    } catch (e: SecurityException) {
+      android.util.Log.w("NPPW", "headless wake refused", e)
+    }
   }
 
   /** Must run on the controller's application thread (the main executor above). */
@@ -116,6 +157,7 @@ class WidgetControlReceiver : BroadcastReceiver() {
 
     private val ACTIONS = setOf(ACTION_PLAY_PAUSE, ACTION_NEXT, ACTION_PREV, ACTION_SKIP)
     private const val PLAYBACK_SERVICE_CLASS = "com.margelo.nitro.queueplayer.PlaybackService"
+    private const val ACTION_HEADLESS_WAKE = "com.margelo.nitro.queueplayer.HEADLESS_WAKE"
     /** The app's deep-link scheme (see `app.json` → `scheme`). */
     private const val APP_SCHEME = "substreamer"
 

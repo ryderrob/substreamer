@@ -19,6 +19,7 @@ import { errMessage } from '../utils/errorMessage';
 import { installHeadlessMediaService } from './headlessMediaService';
 import { LOOKAHEAD_MAX_CACHE_MB } from '../store/playbackSettingsStore';
 import { ensureNowPlayingPlaceholderUri } from './nowPlayingPlaceholder';
+import { maybeResumeFromWidget } from './widgetResumeService';
 
 // The lookahead-cache disk budget AND eviction policy are fixed here at
 // configure() — Android's Media3 SimpleCache is built at the right size (it
@@ -60,6 +61,7 @@ void getTrackPlayer()
     // idempotent; this covers the cold car / Siri / Assistant wake that runs
     // this bundle before any screen (or login) mounts.
     installHeadlessMediaService();
+    void maybeResumeFromWidget();
   })
   .catch((e) => {
     // eslint-disable-next-line no-console

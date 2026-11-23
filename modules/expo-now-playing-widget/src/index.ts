@@ -21,6 +21,15 @@ export interface WidgetSnapshot {
   tracks: WidgetTrack[];
 }
 
+/** A play / row-tap the widget left for the app when the player process was dead. */
+export interface WidgetResumeRequest {
+  kind: 'play' | 'skip';
+  /** Absolute queue index for `skip`, otherwise null. */
+  index: number | null;
+  /** Epoch ms the widget saved the request. */
+  requestedAt: number;
+}
+
 /**
  * Push the current player snapshot to the Android home-screen widget. No-op off Android
  * (the native module resolves to a no-op there). The snapshot is persisted natively so a
@@ -33,4 +42,24 @@ export function setWidgetSnapshot(snapshot: WidgetSnapshot): void {
 /** Reset the widget to its empty state (queue cleared / logout). No-op off Android. */
 export function clearWidget(): void {
   ExpoNowPlayingWidget.clear();
+}
+
+/**
+ * Return and clear the pending widget resume request, or null when there is none or it is
+ * malformed. No-op (null) off Android.
+ */
+export function consumeWidgetResumeRequest(): WidgetResumeRequest | null {
+  const json = ExpoNowPlayingWidget.consumeResumeRequest();
+  if (!json) return null;
+  try {
+    const parsed = JSON.parse(json) as Partial<WidgetResumeRequest> | null;
+    if (!parsed || (parsed.kind !== 'play' && parsed.kind !== 'skip')) return null;
+    if (typeof parsed.requestedAt !== 'number') return null;
+    const index = typeof parsed.index === 'number' ? parsed.index : null;
+    if (parsed.kind === 'skip' && index === null) return null;
+    return { kind: parsed.kind, index, requestedAt: parsed.requestedAt };
+  } catch {
+    // Malformed payload: treat as no request.
+    return null;
+  }
 }

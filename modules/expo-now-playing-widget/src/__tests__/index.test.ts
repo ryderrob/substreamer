@@ -1,5 +1,10 @@
 import ExpoNowPlayingWidgetModule from '../ExpoNowPlayingWidgetModule';
-import { setWidgetSnapshot, clearWidget, type WidgetSnapshot } from '../index';
+import {
+  setWidgetSnapshot,
+  clearWidget,
+  consumeWidgetResumeRequest,
+  type WidgetSnapshot,
+} from '../index';
 
 const mockModule = jest.mocked(ExpoNowPlayingWidgetModule);
 
@@ -38,6 +43,49 @@ describe('setWidgetSnapshot', () => {
     setWidgetSnapshot(snapshot);
 
     expect(mockModule.setSnapshot).toHaveBeenCalledWith(JSON.stringify(snapshot));
+  });
+});
+
+describe('consumeWidgetResumeRequest', () => {
+  const consume = (json: string | null) => {
+    mockModule.consumeResumeRequest.mockReturnValueOnce(json);
+    return consumeWidgetResumeRequest();
+  };
+
+  it('parses a play request', () => {
+    expect(consume('{"kind":"play","index":null,"requestedAt":1000}')).toEqual({
+      kind: 'play',
+      index: null,
+      requestedAt: 1000,
+    });
+  });
+
+  it('parses a skip request with its index', () => {
+    expect(consume('{"kind":"skip","index":7,"requestedAt":2000}')).toEqual({
+      kind: 'skip',
+      index: 7,
+      requestedAt: 2000,
+    });
+  });
+
+  it('returns null when nothing is pending', () => {
+    expect(consume(null)).toBeNull();
+  });
+
+  it('returns null for malformed JSON', () => {
+    expect(consume('{not json')).toBeNull();
+  });
+
+  it('returns null for missing or invalid fields', () => {
+    expect(consume('null')).toBeNull();
+    expect(consume('{"kind":"play","index":null}')).toBeNull();
+    expect(consume('{"kind":"stop","index":null,"requestedAt":1}')).toBeNull();
+    expect(consume('{"index":1,"requestedAt":1}')).toBeNull();
+    expect(consume('{"kind":"skip","index":null,"requestedAt":1}')).toBeNull();
+  });
+
+  it('returns null from the default mock', () => {
+    expect(consumeWidgetResumeRequest()).toBeNull();
   });
 });
 

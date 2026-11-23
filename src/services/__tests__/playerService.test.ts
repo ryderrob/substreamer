@@ -116,6 +116,7 @@ import { getCoverArtUrl, getStreamUrl, type Child } from '../subsonicService';
 import {
   initPlayer,
   restorePersistedQueueAfterBoot,
+  resumeFromWidget,
   playTrack,
   togglePlayPause,
   skipToNext,
@@ -309,6 +310,102 @@ describe('restorePersistedQueueAfterBoot — live car-session adoption', () => {
     await flush();
 
     expect(mockSetCurrentTrack).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }), 0);
+  });
+
+  it('does not start a second restore while one is still hydrating', async () => {
+    const { waitForTrackMapsReady } = require('../musicCacheService');
+    let release!: () => void;
+    (waitForTrackMapsReady as jest.Mock).mockImplementationOnce(
+      () => new Promise<void>((resolve) => { release = resolve; }),
+    );
+    mockGetPersistedQueue.mockReturnValue({
+      queue: [makeChild('p1'), makeChild('p2')],
+      currentTrackIndex: 0,
+    });
+
+    restorePersistedQueueAfterBoot();
+    restorePersistedQueueAfterBoot();
+    release();
+    await flush();
+    await flush();
+
+    expect(mockTP.setQueue).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('resumeFromWidget', () => {
+  const persisted = () => ({
+    queue: [makeChild('p1'), makeChild('p2'), makeChild('p3')],
+    currentTrackIndex: 1,
+  });
+
+  it('restores the persisted queue then plays', async () => {
+    mockGetPersistedQueue.mockReturnValue(persisted());
+
+    await resumeFromWidget({ kind: 'play', index: null, requestedAt: 0 });
+
+    expect(mockTP.setQueue).toHaveBeenCalledTimes(1);
+    expect(mockTP.setQueue.mock.calls[0][0]).toHaveLength(3);
+    expect(mockSetCurrentTrack).toHaveBeenCalledWith(expect.objectContaining({ id: 'p2' }), 1);
+    expect(mockTP.play).toHaveBeenCalled();
+  });
+
+  it('skips to the requested index after restoring', async () => {
+    mockGetPersistedQueue.mockReturnValue(persisted());
+
+    await resumeFromWidget({ kind: 'skip', index: 2, requestedAt: 0 });
+
+    expect(mockTP.setQueue).toHaveBeenCalledTimes(1);
+    expect(mockTP.skipToIndex).toHaveBeenCalledWith(2);
+    expect(mockTP.play).toHaveBeenCalled();
+  });
+
+  it('plays from the restored position when the skip index is out of range', async () => {
+    mockGetPersistedQueue.mockReturnValue(persisted());
+
+    await resumeFromWidget({ kind: 'skip', index: 9, requestedAt: 0 });
+
+    expect(mockTP.skipToIndex).not.toHaveBeenCalled();
+    expect(mockTP.play).toHaveBeenCalled();
+  });
+
+  it('does not restore when a live engine session exists', async () => {
+    const carQueue = [makeChild('c1'), makeChild('c2')];
+    await playTrack(carQueue[0], carQueue);
+    mockTP.setQueue.mockClear();
+    mockTP.play.mockClear();
+    mockTP.getState.mockReturnValue('paused');
+    mockTP.getCurrentTrackIndex.mockReturnValue(0);
+    mockGetPersistedQueue.mockReturnValue(persisted());
+
+    await resumeFromWidget({ kind: 'skip', index: 1, requestedAt: 0 });
+
+    expect(mockTP.setQueue).not.toHaveBeenCalled();
+    expect(mockTP.skipToIndex).toHaveBeenCalledWith(1);
+    expect(mockTP.play).toHaveBeenCalled();
+  });
+
+  it('leaves an already-playing live session alone', async () => {
+    const carQueue = [makeChild('c1')];
+    await playTrack(carQueue[0], carQueue);
+    mockTP.play.mockClear();
+    mockTP.pause.mockClear();
+    mockTP.getState.mockReturnValue('playing');
+    mockTP.getCurrentTrackIndex.mockReturnValue(0);
+
+    await resumeFromWidget({ kind: 'play', index: null, requestedAt: 0 });
+
+    expect(mockTP.play).not.toHaveBeenCalled();
+    expect(mockTP.pause).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the persisted queue is empty', async () => {
+    mockGetPersistedQueue.mockReturnValue({ queue: [], currentTrackIndex: 0 });
+
+    await resumeFromWidget({ kind: 'play', index: null, requestedAt: 0 });
+
+    expect(mockTP.setQueue).not.toHaveBeenCalled();
+    expect(mockTP.play).not.toHaveBeenCalled();
   });
 });
 

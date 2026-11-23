@@ -5,6 +5,8 @@ export interface ExpoNowPlayingWidgetNativeModule {
   setSnapshot: (json: string) => void;
   /** Reset the widget(s) to the empty state. */
   clear: () => void;
+  /** Return and remove the pending widget resume request (JSON), or null when none. */
+  consumeResumeRequest: () => string | null;
 }
 
 let module: ExpoNowPlayingWidgetNativeModule;
@@ -17,6 +19,7 @@ try {
   module = {
     setSnapshot: () => {},
     clear: () => {},
+    consumeResumeRequest: () => null,
   };
 }
 

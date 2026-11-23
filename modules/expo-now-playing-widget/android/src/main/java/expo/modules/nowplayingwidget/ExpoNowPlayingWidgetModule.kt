@@ -20,6 +20,11 @@ class ExpoNowPlayingWidgetModule : Module() {
       }
     }
 
+    Function("consumeResumeRequest") {
+      val context = appContext.reactContext?.applicationContext
+      if (context != null) WidgetResumeRequestStore.consumeJson(context) else null
+    }
+
     Function("clear") {
       val context = appContext.reactContext?.applicationContext
       if (context != null) {

@@ -52,6 +52,7 @@ import {
   stampQueueFormat,
 } from './playerHelpers';
 import { isFireOS } from '../utils/isFireOS';
+import type { WidgetResumeRequest } from 'expo-now-playing-widget';
 
 /** The RNQP player singleton. Safe to hold — `getTrackPlayer()` always returns
  *  the same instance; the engine is configured in `playerBootstrap.ts`. */
@@ -344,6 +345,8 @@ function adoptLiveEngineSession(): void {
  * kicks off the async hydration that loads it into the native engine.
  */
 export function restorePersistedQueueAfterBoot(): void {
+  // A restore already in flight must not start a second one.
+  if (hydrationPromise) return;
   // A car/Siri browse tap may have started playback in this same process before
   // the phone UI mounted (shared RNQP engine). Adopt that live session instead
   // of re-driving the engine with setQueue (which restarts the current track).
@@ -357,6 +360,26 @@ export function restorePersistedQueueAfterBoot(): void {
       hydrationPromise = null;
     });
   }
+}
+
+/**
+ * Play on behalf of the Android widget after the player process was killed: restore the
+ * persisted queue into the engine (unless a live session already exists), then start
+ * playback, at the requested row for a `skip`. Does nothing when no queue was restored.
+ */
+export async function resumeFromWidget(request: WidgetResumeRequest): Promise<void> {
+  if (!hasLiveEngineSession()) {
+    restorePersistedQueueAfterBoot();
+    await awaitHydration();
+  }
+  if (currentChildQueue.length === 0) return;
+
+  const { kind, index } = request;
+  if (kind === 'skip' && index != null && index >= 0 && index < currentChildQueue.length) {
+    await skipToTrack(index);
+    return;
+  }
+  if (tp.getState() !== 'playing') await togglePlayPause();
 }
 
 /**

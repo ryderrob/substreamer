@@ -4,3 +4,4 @@
 
 export const setSnapshot = (_json: string) => {};
 export const clear = () => {};
+export const consumeResumeRequest = (): string | null => null;

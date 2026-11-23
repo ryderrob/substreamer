@@ -770,7 +770,7 @@ function scheduleRefresh(): void {
  * await once the app has been opened (every store already hydrated). Awaited by `hydrateThenPush` and at
  * the top of each RNQP resolver so nothing reads `isOffline()`/stores too early.
  */
-function ensureHeadlessDataReady(): Promise<void> {
+export function ensureHeadlessDataReady(): Promise<void> {
   if (!headlessSessionReady()) return Promise.resolve();
   if (!dataReadyPromise) {
     dataReadyPromise = Promise.all([rehydrateAllStores(), awaitKvHydration()])
